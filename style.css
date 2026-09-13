@@ -1,0 +1,232 @@
+/* =====================================================================
+   UFUQ Branch Inspection System — Stylesheet
+   ===================================================================== */
+
+:root {
+  --ink: #17202a;
+  --ink-soft: #4b5563;
+  --muted: #6b7280;
+  --border: #e2e8f0;
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --accent: #0f766e;      /* teal — primary actions */
+  --accent-dark: #0b5a54;
+  --danger: #b91c1c;
+  --success: #166534;
+  --warning-bg: #fff7ed;
+  --warning-border: #fed7aa;
+  --warning-ink: #9a3412;
+  --radius: 12px;
+  --shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+  line-height: 1.6;
+}
+
+.wrap {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 20px 60px;
+}
+
+.hidden { display: none !important; }
+
+/* ---------------------------------------------------------------- Cards */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow);
+}
+
+.card h2 {
+  margin: 0 0 4px;
+  font-size: 18px;
+}
+
+.card .hint {
+  color: var(--muted);
+  font-size: 13px;
+  margin: 4px 0 14px;
+}
+
+/* ------------------------------------------------------------ Login */
+
+.login-card {
+  max-width: 400px;
+  margin: 80px auto;
+  text-align: center;
+}
+
+.login-card h1 {
+  font-size: 22px;
+  margin: 4px 0 2px;
+}
+
+.login-card p {
+  color: var(--muted);
+  margin: 0 0 20px;
+  font-size: 14px;
+}
+
+/* -------------------------------------------------------------- Forms */
+
+.field-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  align-items: end;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 6px;
+}
+
+input, select, button {
+  width: 100%;
+  font-size: 15px;
+  font-family: inherit;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid #cbd5e1;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+input:focus, select:focus, button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button {
+  cursor: pointer;
+  background: var(--ink);
+  color: #fff;
+  border: 0;
+  font-weight: 600;
+  transition: opacity .15s ease;
+}
+button:hover { opacity: .9; }
+button.primary  { background: var(--accent); }
+button.secondary{ background: #64748b; }
+button.danger   { background: var(--danger); }
+
+/* ---------------------------------------------------------- Feedback */
+
+.result {
+  white-space: pre-wrap;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.notice {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--warning-bg);
+  border: 1px solid var(--warning-border);
+  color: var(--warning-ink);
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.progress {
+  height: 8px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+.progress > i {
+  display: block;
+  height: 100%;
+  width: 0;
+  background: var(--success);
+  transition: width .2s ease;
+}
+
+.progress-status {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+
+/* ------------------------------------------------------------- Forms grid */
+
+.forms-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.form-tile {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.form-tile h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.pill {
+  display: inline-block;
+  padding: 4px 9px;
+  border-radius: 99px;
+  background: #eef2ff;
+  color: #3730a3;
+  margin: 2px 3px 0 0;
+  font-size: 12px;
+}
+
+.form-tile button { margin-top: 12px; }
+
+/* ------------------------------------------------------------ Table (print view) */
+
+table.inspection-table {
+  border-collapse: collapse;
+  width: 100%;
+}
+table.inspection-table th,
+table.inspection-table td {
+  border: 1px solid #cbd5e1;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 14px;
+}
+table.inspection-table th { background: #eef2f5; }
+table.inspection-table td:nth-child(2) { text-align: right; }
+
+.check-mark { font-weight: bold; font-size: 18px; color: var(--success); }
+
+/* ------------------------------------------------------------------ Footer */
+
+.footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 30px 0 10px;
+}
+
+/* ------------------------------------------------------------- Responsive */
+
+@media (max-width: 560px) {
+  .wrap { padding: 16px 12px 40px; }
+  .card { padding: 16px; }
+}
