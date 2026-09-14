@@ -10,7 +10,7 @@ import * as pdfjsLib from 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.mjs'
 
-const FUNCTION_URL = 'https://tnrujxfqvfoqwvclamsi.supabase.co/functions/v1/inspection-api'
+const FUNCTION_URL = 'https://tnrujxfqvfoqwvclamsi.supabase.co/functions/v1/inspection-api-v2'
 const PUBLISHABLE_KEY = 'sb_publishable_UDxeC8HSBNNj2eOugUvtZw_V8u5Ku2e'
 const TOKEN_STORAGE_KEY = 'ufuqToken'
 
