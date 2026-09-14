@@ -92,6 +92,40 @@
           <div><label for="newProductGroup">المجموعة</label><select id="newProductGroup"></select></div>
           <div><button id="addProductButton" class="secondary">إضافة منتج</button></div>
         </div>
+
+        <h3>المجموعات الحالية</h3>
+        <div id="groupsList" class="admin-list"></div>
+
+        <h3>المنتجات الحالية</h3>
+        <div id="productsList" class="admin-list"></div>
+      </div>
+
+      <div class="card">
+        <h2>طباعة نموذج مخصص</h2>
+        <p class="hint">اختر أي فرع (حد أقصى 3) بدل ما تتقيد بالنماذج الـ12 الثابتة، وأضف صور الحرارة لو محتاج.</p>
+
+        <div class="field-grid">
+          <div><label for="printLocation">الموقع (Location)</label><input id="printLocation" value="Riyadh Factory"></div>
+        </div>
+
+        <label>الفروع (حد أقصى 3)</label>
+        <div id="printBranches" class="branches-grid"></div>
+
+        <div class="field-grid">
+          <div>
+            <label for="photo1">صورة حرارة 1</label>
+            <input id="photo1" type="file" accept="image/*" capture="environment">
+            <img id="photoPreview0" class="photo-thumb hidden">
+          </div>
+          <div>
+            <label for="photo2">صورة حرارة 2</label>
+            <input id="photo2" type="file" accept="image/*" capture="environment">
+            <img id="photoPreview1" class="photo-thumb hidden">
+          </div>
+        </div>
+
+        <br>
+        <button id="previewPrintButton" class="primary">معاينة وطباعة</button>
       </div>
 
       <div class="card">

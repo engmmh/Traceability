@@ -197,6 +197,65 @@ button.danger   { background: var(--danger); }
 
 .form-tile button { margin-top: 12px; }
 
+/* ------------------------------------------------------- Admin lists (groups/products) */
+
+.admin-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 8px;
+}
+
+.admin-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+.admin-row:last-child { border-bottom: none; }
+
+.admin-row .admin-name, .admin-row select { width: auto; min-width: 140px; }
+.admin-row .admin-code { font-family: monospace; color: var(--muted); min-width: 70px; }
+
+.swatch-input {
+  width: 34px;
+  height: 34px;
+  padding: 2px;
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------- Custom print builder */
+
+.branches-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin: 8px 0 16px;
+}
+
+.branch-check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+.branch-check input { width: auto; }
+
+.photo-thumb {
+  margin-top: 8px;
+  max-width: 100%;
+  max-height: 140px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  object-fit: cover;
+}
+
 /* ------------------------------------------------------------ Table (print view) */
 
 table.inspection-table {
