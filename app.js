@@ -21,6 +21,10 @@ let appData = { branches: [], forms: [], groups: [], products: [] }
 let selectedPrintBranches = new Set()
 const photoDataUrls = [null, null]
 
+// Photos for the "print all forms" flow: which forms they should appear in.
+const formPhotoDataUrls = [null, null]
+let selectedPhotoFormTargets = new Set()
+
 // Fixed bilingual checklist, transcribed verbatim from the original
 // inspection sheet. Kept as data (not hardcoded HTML) so it's easy to
 // adjust in one place if the checklist itself ever changes.
@@ -119,6 +123,7 @@ function enterApp() {
   el('login').classList.add('hidden')
   el('app').classList.remove('hidden')
   el('runDate').value = todayISO()
+  el('homeCurrentDate').textContent = todayISO()
 }
 
 async function boot() {
@@ -129,6 +134,18 @@ async function boot() {
   renderForms()
   renderGroupManagement()
   renderBranchCheckboxes()
+  renderFormPhotoTargets()
+}
+
+// --------------------------------------------------------- Screen navigation
+
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach((s) => s.classList.add('hidden'))
+  el(screenId).classList.remove('hidden')
+}
+
+function goHome() {
+  showScreen('homeScreen')
 }
 
 async function saveDate() {
@@ -378,7 +395,7 @@ async function previewAndPrint() {
       date: el('runDate').value,
       branch_ids: [...selectedPrintBranches],
     })
-    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation').value, branches, products }]))
+    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation').value, branches, products, photos: photoDataUrls }]))
   } catch (error) {
     alert(error.message)
   }
@@ -420,7 +437,8 @@ function buildProductTableHTML(section) {
     </table>`
 }
 
-function buildChecklistHTML() {
+function buildChecklistHTML(sectionPhotos) {
+  const photos = sectionPhotos || [null, null]
   const checklistRows = INSPECTION_CHECKLIST.map(
     (item) => `
       <tr>
@@ -432,8 +450,8 @@ function buildChecklistHTML() {
 
   const photosHtml = [0, 1]
     .map((i) =>
-      photoDataUrls[i]
-        ? `<img class="temp-photo" src="${photoDataUrls[i]}">`
+      photos[i]
+        ? `<img class="temp-photo" src="${photos[i]}">`
         : `<div class="temp-photo temp-photo-empty">صورة ${i + 1}</div>`,
     )
     .join('')
@@ -473,7 +491,7 @@ function buildPrintDocument(sections) {
         ${buildProductTableHTML(section)}
       </div>
       <div class="page-break">
-        ${buildChecklistHTML()}
+        ${buildChecklistHTML(section.photos)}
       </div>`,
     )
     .join('')
@@ -557,8 +575,9 @@ async function saveFormBranches(formId) {
 async function openForm(formId) {
   try {
     const { date, branches, products } = await callApi('form', { id: formId, date: el('runDate').value })
-    if (!branches.length) return alert('النموذج ده لسه مفيهوش فروع متحددة. دوس "تعديل الفروع" الأول.')
-    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation')?.value, branches, products }]))
+    if (!branches.length) return alert('النموذج ده لسه مفيهوش فروع متحددة. حدد الفروع الأول من تحت اسم النموذج.')
+    const photos = selectedPhotoFormTargets.has(formId) ? formPhotoDataUrls : [null, null]
+    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation')?.value, branches, products, photos }]))
   } catch (error) {
     alert(error.message)
   }
@@ -568,11 +587,49 @@ async function printAllForms() {
   try {
     const { forms } = await callApi('forms-all', { date: el('runDate').value })
     if (!forms.length) return alert('مفيش أي نموذج متحدد له فروع لسه.')
-    const sections = forms.map((f) => ({ date: f.date, location: el('printLocation')?.value, branches: f.branches, products: f.products }))
+    const sections = forms.map((f) => ({
+      date: f.date,
+      location: el('printLocation')?.value,
+      branches: f.branches,
+      products: f.products,
+      photos: selectedPhotoFormTargets.has(f.form.id) ? formPhotoDataUrls : [null, null],
+    }))
     openPrintWindow(buildPrintDocument(sections))
   } catch (error) {
     alert(error.message)
   }
+}
+
+function renderFormPhotoTargets() {
+  el('formPhotoTargets').innerHTML = appData.forms
+    .map(
+      (f) => `
+      <label class="branch-check">
+        <input type="checkbox" value="${f.id}" ${selectedPhotoFormTargets.has(f.id) ? 'checked' : ''}>
+        النموذج ${f.form_no}
+      </label>`,
+    )
+    .join('')
+}
+
+function onFormPhotoTargetChange(e) {
+  const checkbox = e.target.closest('input[type="checkbox"]')
+  if (!checkbox) return
+  const id = Number(checkbox.value)
+  if (checkbox.checked) selectedPhotoFormTargets.add(id)
+  else selectedPhotoFormTargets.delete(id)
+}
+
+function onFormPhotoChange(e, slot) {
+  const file = e.target.files?.[0]
+  if (!file) return
+  const reader = new FileReader()
+  reader.onload = () => {
+    formPhotoDataUrls[slot] = reader.result
+    el(`formPhotoPreview${slot}`).src = reader.result
+    el(`formPhotoPreview${slot}`).classList.remove('hidden')
+  }
+  reader.readAsDataURL(file)
 }
 
 // --------------------------------------------------------- Event wiring
@@ -616,6 +673,19 @@ function bindEvents() {
   el('photo1').addEventListener('change', (e) => onPhotoChange(e, 0))
   el('photo2').addEventListener('change', (e) => onPhotoChange(e, 1))
   el('previewPrintButton').addEventListener('click', previewAndPrint)
+
+  // Home dashboard navigation
+  document.querySelectorAll('[data-screen]').forEach((tile) => {
+    tile.addEventListener('click', () => showScreen(tile.dataset.screen))
+  })
+  document.querySelectorAll('[data-go-home]').forEach((btn) => {
+    btn.addEventListener('click', goHome)
+  })
+
+  // Forms-screen photo targeting
+  el('formPhoto1').addEventListener('change', (e) => onFormPhotoChange(e, 0))
+  el('formPhoto2').addEventListener('change', (e) => onFormPhotoChange(e, 1))
+  el('formPhotoTargets').addEventListener('change', onFormPhotoTargetChange)
 }
 
 // -------------------------------------------------------------- Startup

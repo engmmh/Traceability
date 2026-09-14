@@ -25,106 +25,183 @@
     <!-- -------------------------------------------------------- App -->
     <div id="app" class="hidden">
 
-      <div class="card">
-        <h1>لوحة التحكم</h1>
-        <div class="field-grid">
-          <div>
-            <label for="runDate">تاريخ التشغيل</label>
-            <input id="runDate" type="date">
-          </div>
-          <div>
-            <button id="saveDateButton" class="primary">تحديث التاريخ</button>
-          </div>
-          <div>
-            <button id="resetDayButton" class="danger">مسح علامات ✓ لليوم</button>
-          </div>
+      <!-- Home dashboard: icon tiles, one per section -->
+      <div id="homeScreen" class="screen">
+        <div class="card home-header">
+          <h1>لوحة التحكم</h1>
+          <p class="hint">التاريخ الحالي: <b id="homeCurrentDate"></b></p>
         </div>
-        <div id="dateMsg" class="result"></div>
-      </div>
-
-      <div class="card">
-        <h2>رفع فواتير PDF</h2>
-        <p class="hint">
-          يتم استخراج النص داخل المتصفح ثم إرسال البيانات اللازمة فقط إلى النظام.
-          الفواتير الممسوحة كصور (Scanned) تحتاج OCR لاحقًا.
-        </p>
-        <input id="pdfs" type="file" accept="application/pdf" multiple>
-
-        <div id="pdfProgress" class="hidden">
-          <div class="progress"><i id="pdfBar"></i></div>
-          <div id="pdfStatus" class="progress-status"></div>
-        </div>
-
-        <br>
-        <button id="uploadButton" class="primary">معالجة الفواتير</button>
-        <div id="uploadMsg" class="result"></div>
-      </div>
-
-      <div class="card">
-        <h2>تحديث تواريخ المنتجات</h2>
-        <p class="hint">اختر مجموعة بس عشان تحدّث كل منتجاتها دفعة واحدة — أو اختر منتج معيّن كمان عشان تحدّثه هو لوحده بس.</p>
-        <div class="field-grid">
-          <div><label for="dateGroupSelect">المجموعة</label><select id="dateGroupSelect"></select></div>
-          <div><label for="dateProductSelect">منتج معيّن (اختياري)</label><select id="dateProductSelect"></select></div>
-          <div><label for="dateProd">تاريخ الإنتاج</label><input id="dateProd" type="date"></div>
-          <div><label for="dateExp">تاريخ الانتهاء</label><input id="dateExp" type="date"></div>
-          <div><label for="dateNote">ملاحظة</label><input id="dateNote" placeholder="ملاحظة (اختياري)"></div>
-          <div><button id="saveDatesButton" class="primary">حفظ</button></div>
+        <div class="icon-grid">
+          <button class="icon-tile" data-screen="screen-date">
+            <span class="icon-emoji">📅</span>
+            <span>تحديث التاريخ</span>
+          </button>
+          <button class="icon-tile" data-screen="screen-upload">
+            <span class="icon-emoji">📄</span>
+            <span>رفع فواتير PDF</span>
+          </button>
+          <button class="icon-tile" data-screen="screen-dates">
+            <span class="icon-emoji">🗓️</span>
+            <span>تواريخ المنتجات</span>
+          </button>
+          <button class="icon-tile" data-screen="screen-products">
+            <span class="icon-emoji">📦</span>
+            <span>المنتجات والمجموعات</span>
+          </button>
+          <button class="icon-tile" data-screen="screen-print">
+            <span class="icon-emoji">🖨️</span>
+            <span>طباعة نموذج مخصص</span>
+          </button>
+          <button class="icon-tile" data-screen="screen-forms">
+            <span class="icon-emoji">📋</span>
+            <span>النماذج الـ12</span>
+          </button>
         </div>
       </div>
 
-      <div class="card">
-        <h2>المنتجات والمجموعات</h2>
-        <div class="field-grid">
-          <div><label for="newGroup">اسم المجموعة الجديدة</label><input id="newGroup" placeholder="مثال: 10 days"></div>
-          <div><button id="addGroupButton" class="secondary">إضافة مجموعة</button></div>
-          <div><label for="newProductCode">كود المنتج</label><input id="newProductCode" placeholder="1234567"></div>
-          <div><label for="newProductName">اسم المنتج</label><input id="newProductName"></div>
-          <div><label for="newProductGroup">المجموعة</label><select id="newProductGroup"></select></div>
-          <div><button id="addProductButton" class="secondary">إضافة منتج</button></div>
+      <!-- ---------------- Date screen ---------------- -->
+      <div id="screen-date" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>تحديث التاريخ</h2>
+          <div class="field-grid">
+            <div>
+              <label for="runDate">تاريخ التشغيل</label>
+              <input id="runDate" type="date">
+            </div>
+            <div>
+              <button id="saveDateButton" class="primary">تحديث التاريخ</button>
+            </div>
+            <div>
+              <button id="resetDayButton" class="danger">مسح علامات ✓ لليوم</button>
+            </div>
+          </div>
+          <div id="dateMsg" class="result"></div>
         </div>
-
-        <h3>المجموعات الحالية</h3>
-        <div id="groupsList" class="admin-list"></div>
-
-        <h3>المنتجات الحالية</h3>
-        <div id="productsList" class="admin-list"></div>
       </div>
 
-      <div class="card">
-        <h2>طباعة نموذج مخصص</h2>
-        <p class="hint">اختر أي فرع (حد أقصى 3) بدل ما تتقيد بالنماذج الـ12 الثابتة، وأضف صور الحرارة لو محتاج.</p>
+      <!-- ---------------- Upload screen ---------------- -->
+      <div id="screen-upload" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>رفع فواتير PDF</h2>
+          <p class="hint">
+            يتم استخراج النص داخل المتصفح ثم إرسال البيانات اللازمة فقط إلى النظام.
+            الفواتير الممسوحة كصور (Scanned) تحتاج OCR لاحقًا.
+          </p>
+          <input id="pdfs" type="file" accept="application/pdf" multiple>
 
-        <div class="field-grid">
-          <div><label for="printLocation">الموقع (Location)</label><input id="printLocation" value="Riyadh Factory"></div>
-        </div>
-
-        <label>الفروع (حد أقصى 3)</label>
-        <div id="printBranches" class="branches-grid"></div>
-
-        <div class="field-grid">
-          <div>
-            <label for="photo1">صورة حرارة 1</label>
-            <input id="photo1" type="file" accept="image/*" capture="environment">
-            <img id="photoPreview0" class="photo-thumb hidden">
+          <div id="pdfProgress" class="hidden">
+            <div class="progress"><i id="pdfBar"></i></div>
+            <div id="pdfStatus" class="progress-status"></div>
           </div>
-          <div>
-            <label for="photo2">صورة حرارة 2</label>
-            <input id="photo2" type="file" accept="image/*" capture="environment">
-            <img id="photoPreview1" class="photo-thumb hidden">
-          </div>
-        </div>
 
-        <br>
-        <button id="previewPrintButton" class="primary">معاينة وطباعة</button>
+          <br>
+          <button id="uploadButton" class="primary">معالجة الفواتير</button>
+          <div id="uploadMsg" class="result"></div>
+        </div>
       </div>
 
-      <div class="card">
-        <h2>النماذج الـ12</h2>
-        <p class="hint">حدد فروع كل نموذج مرة، وبعدها تقدر تطبعه لوحده أو تطبع كل النماذج مع بعض في ورقة واحدة (كل نموذج بصفحاته الخاصة).</p>
-        <button id="printAllFormsButton" class="primary">طباعة كل النماذج مع بعض</button>
-        <br><br>
-        <div id="forms" class="forms-grid"></div>
+      <!-- ---------------- Product dates screen ---------------- -->
+      <div id="screen-dates" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>تحديث تواريخ المنتجات</h2>
+          <p class="hint">اختر مجموعة بس عشان تحدّث كل منتجاتها دفعة واحدة — أو اختر منتج معيّن كمان عشان تحدّثه هو لوحده بس.</p>
+          <div class="field-grid">
+            <div><label for="dateGroupSelect">المجموعة</label><select id="dateGroupSelect"></select></div>
+            <div><label for="dateProductSelect">منتج معيّن (اختياري)</label><select id="dateProductSelect"></select></div>
+            <div><label for="dateProd">تاريخ الإنتاج</label><input id="dateProd" type="date"></div>
+            <div><label for="dateExp">تاريخ الانتهاء</label><input id="dateExp" type="date"></div>
+            <div><label for="dateNote">ملاحظة</label><input id="dateNote" placeholder="ملاحظة (اختياري)"></div>
+            <div><button id="saveDatesButton" class="primary">حفظ</button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ---------------- Products & groups screen ---------------- -->
+      <div id="screen-products" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>المنتجات والمجموعات</h2>
+          <div class="field-grid">
+            <div><label for="newGroup">اسم المجموعة الجديدة</label><input id="newGroup" placeholder="مثال: 10 days"></div>
+            <div><button id="addGroupButton" class="secondary">إضافة مجموعة</button></div>
+            <div><label for="newProductCode">كود المنتج</label><input id="newProductCode" placeholder="1234567"></div>
+            <div><label for="newProductName">اسم المنتج</label><input id="newProductName"></div>
+            <div><label for="newProductGroup">المجموعة</label><select id="newProductGroup"></select></div>
+            <div><button id="addProductButton" class="secondary">إضافة منتج</button></div>
+          </div>
+
+          <h3>المجموعات الحالية</h3>
+          <div id="groupsList" class="admin-list"></div>
+
+          <h3>المنتجات الحالية</h3>
+          <div id="productsList" class="admin-list"></div>
+        </div>
+      </div>
+
+      <!-- ---------------- Custom print screen ---------------- -->
+      <div id="screen-print" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>طباعة نموذج مخصص</h2>
+          <p class="hint">اختر أي فرع (حد أقصى 3) بدل ما تتقيد بالنماذج الـ12 الثابتة، وأضف صور الحرارة لو محتاج.</p>
+
+          <div class="field-grid">
+            <div><label for="printLocation">الموقع (Location)</label><input id="printLocation" value="Riyadh Factory"></div>
+          </div>
+
+          <label>الفروع (حد أقصى 3)</label>
+          <div id="printBranches" class="branches-grid"></div>
+
+          <div class="field-grid">
+            <div>
+              <label for="photo1">صورة حرارة 1</label>
+              <input id="photo1" type="file" accept="image/*" capture="environment">
+              <img id="photoPreview0" class="photo-thumb hidden">
+            </div>
+            <div>
+              <label for="photo2">صورة حرارة 2</label>
+              <input id="photo2" type="file" accept="image/*" capture="environment">
+              <img id="photoPreview1" class="photo-thumb hidden">
+            </div>
+          </div>
+
+          <br>
+          <button id="previewPrintButton" class="primary">معاينة وطباعة</button>
+        </div>
+      </div>
+
+      <!-- ---------------- Forms screen ---------------- -->
+      <div id="screen-forms" class="screen hidden">
+        <button class="back-button" data-go-home>⬅ الرئيسية</button>
+        <div class="card">
+          <h2>صور الحرارة لطباعة النماذج</h2>
+          <p class="hint">ارفع الصور هنا واختر أي نموذج (أو أكتر) تحب الصور دي تظهر فيه. باقي النماذج هتطبع بمكان فاضي للصور.</p>
+          <div class="field-grid">
+            <div>
+              <label for="formPhoto1">صورة حرارة 1</label>
+              <input id="formPhoto1" type="file" accept="image/*" capture="environment">
+              <img id="formPhotoPreview0" class="photo-thumb hidden">
+            </div>
+            <div>
+              <label for="formPhoto2">صورة حرارة 2</label>
+              <input id="formPhoto2" type="file" accept="image/*" capture="environment">
+              <img id="formPhotoPreview1" class="photo-thumb hidden">
+            </div>
+          </div>
+          <label>الصور دي تظهر في النماذج:</label>
+          <div id="formPhotoTargets" class="branches-grid"></div>
+        </div>
+
+        <div class="card">
+          <h2>النماذج الـ12</h2>
+          <p class="hint">حدد فروع كل نموذج مرة، وبعدها تقدر تطبعه لوحده أو تطبع كل النماذج مع بعض في ورقة واحدة (كل نموذج بصفحاته الخاصة).</p>
+          <button id="printAllFormsButton" class="primary">طباعة كل النماذج مع بعض</button>
+          <br><br>
+          <div id="forms" class="forms-grid"></div>
+        </div>
       </div>
 
       <div class="footer">
