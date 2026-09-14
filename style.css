@@ -253,6 +253,11 @@ button.danger   { background: var(--danger); }
 
 .form-tile .branch-check { padding: 5px 8px; font-size: 12px; }
 
+.form-photos-row { display: flex; gap: 8px; margin: 6px 0; }
+.form-photo-slot { flex: 1; }
+.form-photo-slot input { font-size: 11px; }
+.form-photo-slot .photo-thumb { margin-top: 4px; max-height: 70px; }
+
 .photo-thumb {
   margin-top: 8px;
   max-width: 100%;

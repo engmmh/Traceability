@@ -21,9 +21,13 @@ let appData = { branches: [], forms: [], groups: [], products: [] }
 let selectedPrintBranches = new Set()
 const photoDataUrls = [null, null]
 
-// Photos for the "print all forms" flow: which forms they should appear in.
-const formPhotoDataUrls = [null, null]
-let selectedPhotoFormTargets = new Set()
+// Temperature photos for the "forms" flow: each form keeps its own pair,
+// independently — add/replace/clear one form's photos without touching
+// another form's.
+const formPhotos = {}
+function getFormPhotos(formId) {
+  return formPhotos[formId] || [null, null]
+}
 
 // Fixed bilingual checklist, transcribed verbatim from the original
 // inspection sheet. Kept as data (not hardcoded HTML) so it's easy to
@@ -134,7 +138,7 @@ async function boot() {
   renderForms()
   renderGroupManagement()
   renderBranchCheckboxes()
-  renderFormPhotoTargets()
+  renderBranchesAdmin()
 }
 
 // --------------------------------------------------------- Screen navigation
@@ -263,6 +267,57 @@ async function addProduct() {
     alert(`تمت إضافة المنتج: ${product.name}`)
     el('newProductCode').value = ''
     el('newProductName').value = ''
+    await boot()
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+// ------------------------------------------------------ Branches management
+
+function renderBranchesAdmin() {
+  el('branchesList').innerHTML = appData.branches
+    .map(
+      (b) => `
+      <div class="admin-row" data-branch-id="${b.id}">
+        <input type="text" class="admin-code" value="${escapeHtml(b.code)}" data-branch-code="${b.id}">
+        <input type="text" class="admin-name" value="${escapeHtml(b.name)}" data-branch-name="${b.id}">
+        <button class="secondary" data-save-branch="${b.id}">حفظ</button>
+        <button class="danger" data-delete-branch="${b.id}">حذف</button>
+      </div>`,
+    )
+    .join('') || '<p class="hint">لا توجد فروع بعد.</p>'
+}
+
+async function addBranch() {
+  try {
+    const { branch } = await callApi('branches', { code: el('newBranchCode').value, name: el('newBranchName').value })
+    alert(`تمت إضافة الفرع: ${branch.name}`)
+    el('newBranchCode').value = ''
+    el('newBranchName').value = ''
+    await boot()
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+async function saveBranchRow(id) {
+  try {
+    await callApi('branches-update', {
+      id,
+      code: document.querySelector(`[data-branch-code="${id}"]`).value,
+      name: document.querySelector(`[data-branch-name="${id}"]`).value,
+    })
+    await boot()
+  } catch (error) {
+    alert(error.message)
+  }
+}
+
+async function deleteBranchRow(id) {
+  if (!confirm('حذف الفرع؟ هيتشال من كل النماذج المرتبط بيها، وسجلاته القديمة هتفضل محفوظة للأرشيف.')) return
+  try {
+    await callApi('branches-delete', { id })
     await boot()
   } catch (error) {
     alert(error.message)
@@ -428,10 +483,10 @@ function buildProductTableHTML(section) {
     .join('')
 
   return `
-    <table>
+    <table class="header-table">
       <tr><td><b>Date : ${date}</b></td><td><b>Location : ${escapeHtml(location || 'Riyadh Factory')}</b></td></tr>
     </table>
-    <table>
+    <table class="product-table">
       <tr><th>Product Code / Name</th>${branchHeaders}<th>Production Date</th><th>Expiry Date</th><th>Notes</th></tr>
       ${rows}
     </table>`
@@ -459,7 +514,7 @@ function buildChecklistHTML(sectionPhotos) {
   return `
     <h2>Product / Vehicle Inspection — فحص المنتج والمركبة</h2>
     <p>Please mark ✓ or X — يرجى وضع علامة ✓ أو X</p>
-    <table>
+    <table class="checklist-table">
       <tr><th></th><th>Item</th><th>البند</th></tr>
       ${checklistRows}
     </table>
@@ -502,21 +557,30 @@ function buildPrintDocument(sections) {
         <title>نموذج فحص - ${sections[0]?.date || todayISO()}</title>
         <style>
           * { box-sizing: border-box; }
-          body { font-family: Arial, 'Segoe UI', sans-serif; padding: 16px; font-size: 12px; }
-          h2 { margin: 0 0 4px; }
-          table { border-collapse: collapse; width: 100%; margin-bottom: 10px; }
-          th, td { border: 1px solid #888; padding: 4px 6px; text-align: center; }
+          @page { size: A4; margin: 7mm; }
+          body { font-family: Arial, 'Segoe UI', sans-serif; font-size: 12px; }
+          h2 { margin: 0 0 3px; font-size: 13px; }
+          table { border-collapse: collapse; width: 100%; margin-bottom: 4px; table-layout: fixed; }
+          th, td { border: 1px solid #888; padding: 0.5px 3px; text-align: center; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+          /* Product table: many rows must fit on a single page */
+          .product-table th, .product-table td { font-size: 7px; line-height: 1.25; padding: 0.5px 2px; }
+          .product-table th { font-size: 7.5px; padding: 2px; }
+          .cell-name { text-align: right !important; }
+
+          .header-table td { font-size: 11px; padding: 3px 6px; }
+
           th { background: #eef2f5; }
-          .cell-name { text-align: right; }
           .page-break { page-break-before: always; }
-          .mark-box { width: 26px; }
-          .check-en { text-align: left; }
-          .check-ar { text-align: right; }
-          .photos-row { display: flex; gap: 10px; margin: 10px 0; }
-          .temp-photo { flex: 1; height: 160px; object-fit: cover; border: 1px solid #999; border-radius: 6px; }
-          .temp-photo-empty { display: flex; align-items: center; justify-content: center; color: #999; background: #f5f5f5; }
-          .sign-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 12px; }
-          .sign-grid div { border-top: 1px solid #333; padding-top: 4px; font-size: 11px; }
+          .mark-box { width: 20px; }
+          .check-en { text-align: left !important; white-space: normal; }
+          .check-ar { text-align: right !important; white-space: normal; }
+          .checklist-table th, .checklist-table td { font-size: 10px; padding: 2px 5px; white-space: normal; }
+          .photos-row { display: flex; gap: 8px; margin: 6px 0; }
+          .temp-photo { flex: 1; height: 110px; object-fit: cover; border: 1px solid #999; border-radius: 6px; }
+          .temp-photo-empty { display: flex; align-items: center; justify-content: center; color: #999; background: #f5f5f5; font-size: 11px; }
+          .sign-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 10px; }
+          .sign-grid div { border-top: 1px solid #333; padding-top: 4px; font-size: 10px; }
           @media print { button { display: none; } }
         </style>
       </head>
@@ -548,6 +612,7 @@ function renderForms() {
           return `<label class="branch-check"><input type="checkbox" value="${b.id}" ${checked ? 'checked' : ''}> ${escapeHtml(b.code)} - ${escapeHtml(b.name)}</label>`
         })
         .join('')
+      const [photo0, photo1] = getFormPhotos(form.id)
       return `
         <div class="form-tile" data-form-id="${form.id}">
           <h3>النموذج ${form.form_no}</h3>
@@ -555,6 +620,20 @@ function renderForms() {
           <label class="branch-edit-label">فروع هذا النموذج:</label>
           <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
           <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
+
+          <label class="branch-edit-label">صور الحرارة الخاصة بالنموذج ده:</label>
+          <div class="form-photos-row">
+            <div class="form-photo-slot">
+              <input type="file" accept="image/*" capture="environment" data-form-photo-input="${form.id}" data-slot="0">
+              ${photo0 ? `<img class="photo-thumb" src="${photo0}">` : ''}
+            </div>
+            <div class="form-photo-slot">
+              <input type="file" accept="image/*" capture="environment" data-form-photo-input="${form.id}" data-slot="1">
+              ${photo1 ? `<img class="photo-thumb" src="${photo1}">` : ''}
+            </div>
+          </div>
+          ${(photo0 || photo1) ? `<button class="danger" data-clear-form-photos="${form.id}">مسح صور النموذج</button>` : ''}
+
           <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
         </div>`
     })
@@ -576,8 +655,7 @@ async function openForm(formId) {
   try {
     const { date, branches, products } = await callApi('form', { id: formId, date: el('runDate').value })
     if (!branches.length) return alert('النموذج ده لسه مفيهوش فروع متحددة. حدد الفروع الأول من تحت اسم النموذج.')
-    const photos = selectedPhotoFormTargets.has(formId) ? formPhotoDataUrls : [null, null]
-    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation')?.value, branches, products, photos }]))
+    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation')?.value, branches, products, photos: getFormPhotos(formId) }]))
   } catch (error) {
     alert(error.message)
   }
@@ -592,7 +670,7 @@ async function printAllForms() {
       location: el('printLocation')?.value,
       branches: f.branches,
       products: f.products,
-      photos: selectedPhotoFormTargets.has(f.form.id) ? formPhotoDataUrls : [null, null],
+      photos: getFormPhotos(f.form.id),
     }))
     openPrintWindow(buildPrintDocument(sections))
   } catch (error) {
@@ -600,36 +678,26 @@ async function printAllForms() {
   }
 }
 
-function renderFormPhotoTargets() {
-  el('formPhotoTargets').innerHTML = appData.forms
-    .map(
-      (f) => `
-      <label class="branch-check">
-        <input type="checkbox" value="${f.id}" ${selectedPhotoFormTargets.has(f.id) ? 'checked' : ''}>
-        النموذج ${f.form_no}
-      </label>`,
-    )
-    .join('')
-}
-
-function onFormPhotoTargetChange(e) {
-  const checkbox = e.target.closest('input[type="checkbox"]')
-  if (!checkbox) return
-  const id = Number(checkbox.value)
-  if (checkbox.checked) selectedPhotoFormTargets.add(id)
-  else selectedPhotoFormTargets.delete(id)
-}
-
-function onFormPhotoChange(e, slot) {
-  const file = e.target.files?.[0]
+function onFormPhotoInputChange(e) {
+  const input = e.target.closest('[data-form-photo-input]')
+  if (!input) return
+  const file = input.files?.[0]
   if (!file) return
+  const formId = Number(input.dataset.formPhotoInput)
+  const slot = Number(input.dataset.slot)
   const reader = new FileReader()
   reader.onload = () => {
-    formPhotoDataUrls[slot] = reader.result
-    el(`formPhotoPreview${slot}`).src = reader.result
-    el(`formPhotoPreview${slot}`).classList.remove('hidden')
+    const current = formPhotos[formId] || [null, null]
+    current[slot] = reader.result
+    formPhotos[formId] = current
+    renderForms()
   }
   reader.readAsDataURL(file)
+}
+
+function clearFormPhotos(formId) {
+  delete formPhotos[formId]
+  renderForms()
 }
 
 // --------------------------------------------------------- Event wiring
@@ -645,13 +713,26 @@ function bindEvents() {
   el('addGroupButton').addEventListener('click', addGroup)
   el('addProductButton').addEventListener('click', addProduct)
   el('printAllFormsButton').addEventListener('click', printAllForms)
+  el('addBranchButton').addEventListener('click', addBranch)
 
-  // Delegated click handler for the dynamically rendered form tiles (view/print + save branches)
+  // Delegated click handler for the dynamically rendered form tiles (view/print, save branches, clear photos)
   el('forms').addEventListener('click', (e) => {
     const openBtn = e.target.closest('[data-open-form]')
     if (openBtn) return openForm(Number(openBtn.dataset.openForm))
     const saveBtn = e.target.closest('[data-save-form-branches]')
     if (saveBtn) return saveFormBranches(Number(saveBtn.dataset.saveFormBranches))
+    const clearBtn = e.target.closest('[data-clear-form-photos]')
+    if (clearBtn) return clearFormPhotos(Number(clearBtn.dataset.clearFormPhotos))
+  })
+  // Delegated change handler for each form tile's own photo inputs
+  el('forms').addEventListener('change', onFormPhotoInputChange)
+
+  // Delegated handlers for the branches admin list
+  el('branchesList').addEventListener('click', (e) => {
+    const saveBtn = e.target.closest('[data-save-branch]')
+    if (saveBtn) return saveBranchRow(Number(saveBtn.dataset.saveBranch))
+    const delBtn = e.target.closest('[data-delete-branch]')
+    if (delBtn) return deleteBranchRow(Number(delBtn.dataset.deleteBranch))
   })
 
   // Delegated handlers for the groups/products admin lists
@@ -681,11 +762,6 @@ function bindEvents() {
   document.querySelectorAll('[data-go-home]').forEach((btn) => {
     btn.addEventListener('click', goHome)
   })
-
-  // Forms-screen photo targeting
-  el('formPhoto1').addEventListener('change', (e) => onFormPhotoChange(e, 0))
-  el('formPhoto2').addEventListener('change', (e) => onFormPhotoChange(e, 1))
-  el('formPhotoTargets').addEventListener('change', onFormPhotoTargetChange)
 }
 
 // -------------------------------------------------------------- Startup
