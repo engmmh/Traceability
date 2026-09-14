@@ -74,6 +74,7 @@
       <div class="card">
         <h2>تحديث منتج منفرد</h2>
         <div class="field-grid">
+          <div><label for="productFilterGroup">تصفية حسب المجموعة</label><select id="productFilterGroup"></select></div>
           <div><label for="productSelect">المنتج</label><select id="productSelect"></select></div>
           <div><label for="prodProd">تاريخ الإنتاج</label><input id="prodProd" type="date"></div>
           <div><label for="prodExp">تاريخ الانتهاء</label><input id="prodExp" type="date"></div>
@@ -130,6 +131,9 @@
 
       <div class="card">
         <h2>النماذج الـ12</h2>
+        <p class="hint">حدد فروع كل نموذج مرة، وبعدها تقدر تطبعه لوحده أو تطبع كل النماذج مع بعض في ورقة واحدة (كل نموذج بصفحاته الخاصة).</p>
+        <button id="printAllFormsButton" class="primary">طباعة كل النماذج مع بعض</button>
+        <br><br>
         <div id="forms" class="forms-grid"></div>
       </div>
 

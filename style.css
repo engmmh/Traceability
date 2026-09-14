@@ -197,6 +197,11 @@ button.danger   { background: var(--danger); }
 
 .form-tile button { margin-top: 12px; }
 
+.form-tile details { margin-top: 10px; font-size: 13px; }
+.form-tile summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; }
+.form-branch-edit { margin: 8px 0; }
+.pills-row { min-height: 20px; }
+
 /* ------------------------------------------------------- Admin lists (groups/products) */
 
 .admin-list {

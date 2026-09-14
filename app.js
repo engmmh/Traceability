@@ -126,6 +126,7 @@ async function boot() {
   fillSelect('groupSelect', appData.groups, 'id', 'name', 'اختر المجموعة')
   fillSelect('newProductGroup', appData.groups, 'id', 'name', 'بدون مجموعة')
   fillSelect('productSelect', appData.products, 'id', 'name', 'اختر المنتج')
+  fillSelect('productFilterGroup', appData.groups, 'id', 'name', 'كل المنتجات')
   renderForms()
   renderGroupManagement()
   renderBranchCheckboxes()
@@ -220,6 +221,12 @@ async function saveProductDate() {
   } catch (error) {
     alert(error.message)
   }
+}
+
+function onProductFilterChange() {
+  const groupId = el('productFilterGroup').value
+  const filtered = groupId ? appData.products.filter((p) => String(p.group_id) === groupId) : appData.products
+  fillSelect('productSelect', filtered, 'id', 'name', 'اختر المنتج')
 }
 
 async function addGroup() {
@@ -374,19 +381,24 @@ async function previewAndPrint() {
       date: el('runDate').value,
       branch_ids: [...selectedPrintBranches],
     })
-    const printWindow = window.open('', '_blank')
-    printWindow.document.write(buildCustomPrintHTML(date, branches, products))
-    printWindow.document.close()
+    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation').value, branches, products }]))
   } catch (error) {
     alert(error.message)
   }
 }
 
-function buildCustomPrintHTML(date, branches, products) {
-  const location = el('printLocation').value || 'Riyadh Factory'
+// -------------------------------------------------- Shared print template
+//
+// One shared builder used by: the custom print builder, a single form, and
+// "print all forms". Each entry in `sections` becomes its own product table
+// + its own checklist/signature page (page-break-before between them), so
+// every branch group gets an independently signable sheet.
+
+function buildProductTableHTML(section) {
+  const { date, location, branches, products } = section
   const branchHeaders = branches.map((b) => `<th>${escapeHtml(b.code)}<br><small>${escapeHtml(b.name)}</small></th>`).join('')
 
-  const productRows = products
+  const rows = products
     .map((p) => {
       const color = p.group?.color || '#ffffff'
       const checks = branches.map((b) => `<td class="check-mark">${p.checks[b.id] ? '✓' : ''}</td>`).join('')
@@ -401,6 +413,17 @@ function buildCustomPrintHTML(date, branches, products) {
     })
     .join('')
 
+  return `
+    <table>
+      <tr><td><b>Date : ${date}</b></td><td><b>Location : ${escapeHtml(location || 'Riyadh Factory')}</b></td></tr>
+    </table>
+    <table>
+      <tr><th>Product Code / Name</th>${branchHeaders}<th>Production Date</th><th>Expiry Date</th><th>Notes</th></tr>
+      ${rows}
+    </table>`
+}
+
+function buildChecklistHTML() {
   const checklistRows = INSPECTION_CHECKLIST.map(
     (item) => `
       <tr>
@@ -419,9 +442,49 @@ function buildCustomPrintHTML(date, branches, products) {
     .join('')
 
   return `
+    <h2>Product / Vehicle Inspection — فحص المنتج والمركبة</h2>
+    <p>Please mark ✓ or X — يرجى وضع علامة ✓ أو X</p>
+    <table>
+      <tr><th></th><th>Item</th><th>البند</th></tr>
+      ${checklistRows}
+    </table>
+
+    <div class="photos-row">${photosHtml}</div>
+
+    <h2>Third: Product Condition — حالة المنتج</h2>
+    <table>
+      <tr>
+        <td>Compliant and ready for distribution<br>مطابق وجاهز للتوزيع</td>
+        <td>Non-compliant (to be held and not dispatched)<br>غير مطابق (يتم الحجز وعدم الإرسال)</td>
+      </tr>
+    </table>
+    <p>Details of non-compliance (if any) — تفاصيل عدم المطابقة (إن وجدت): ______________________</p>
+
+    <div class="sign-grid">
+      <div>Driver signature — توقيع السائق</div>
+      <div>Vehicle No — رقم المركبة</div>
+      <div>Verified By — تم التحقق بواسطة</div>
+      <div>Approved By — اعتماد</div>
+    </div>`
+}
+
+function buildPrintDocument(sections) {
+  const body = sections
+    .map(
+      (section, index) => `
+      <div class="${index > 0 ? 'page-break' : ''}">
+        ${buildProductTableHTML(section)}
+      </div>
+      <div class="page-break">
+        ${buildChecklistHTML()}
+      </div>`,
+    )
+    .join('')
+
+  return `
     <html dir="rtl">
       <head>
-        <title>نموذج فحص - ${date}</title>
+        <title>نموذج فحص - ${sections[0]?.date || todayISO()}</title>
         <style>
           * { box-sizing: border-box; }
           body { font-family: Arial, 'Segoe UI', sans-serif; padding: 16px; font-size: 12px; }
@@ -443,45 +506,17 @@ function buildCustomPrintHTML(date, branches, products) {
         </style>
       </head>
       <body>
-        <table>
-          <tr><td><b>Date : ${date}</b></td><td><b>Location : ${escapeHtml(location)}</b></td></tr>
-        </table>
-        <table>
-          <tr><th>Product Code / Name</th>${branchHeaders}<th>Production Date</th><th>Expiry Date</th><th>Notes</th></tr>
-          ${productRows}
-        </table>
-
-        <div class="page-break">
-          <h2>Product / Vehicle Inspection — فحص المنتج والمركبة</h2>
-          <p>Please mark ✓ or X — يرجى وضع علامة ✓ أو X</p>
-          <table>
-            <tr><th></th><th>Item</th><th>البند</th></tr>
-            ${checklistRows}
-          </table>
-
-          <div class="photos-row">${photosHtml}</div>
-
-          <h2>Third: Product Condition — حالة المنتج</h2>
-          <table>
-            <tr>
-              <td>Compliant and ready for distribution<br>مطابق وجاهز للتوزيع</td>
-              <td>Non-compliant (to be held and not dispatched)<br>غير مطابق (يتم الحجز وعدم الإرسال)</td>
-            </tr>
-          </table>
-          <p>Details of non-compliance (if any) — تفاصيل عدم المطابقة (إن وجدت): ______________________</p>
-
-          <div class="sign-grid">
-            <div>Driver signature — توقيع السائق</div>
-            <div>Vehicle No — رقم المركبة</div>
-            <div>Verified By — تم التحقق بواسطة</div>
-            <div>Approved By — اعتماد</div>
-          </div>
-        </div>
-
+        ${body}
         <br>
         <button onclick="window.print()">طباعة</button>
       </body>
     </html>`
+}
+
+function openPrintWindow(html) {
+  const printWindow = window.open('', '_blank')
+  printWindow.document.write(html)
+  printWindow.document.close()
 }
 
 // ------------------------------------------------------------ Forms UI
@@ -492,70 +527,57 @@ function renderForms() {
       const branchPills = (form.form_branches || [])
         .map((fb) => `<span class="pill">${escapeHtml(fb.branches.code)} - ${escapeHtml(fb.branches.name)}</span>`)
         .join('')
+      const branchCheckboxes = appData.branches
+        .map((b) => {
+          const checked = (form.form_branches || []).some((fb) => fb.branch_id === b.id)
+          return `<label class="branch-check"><input type="checkbox" value="${b.id}" ${checked ? 'checked' : ''}> ${escapeHtml(b.code)} - ${escapeHtml(b.name)}</label>`
+        })
+        .join('')
       return `
-        <div class="form-tile">
+        <div class="form-tile" data-form-id="${form.id}">
           <h3>النموذج ${form.form_no}</h3>
-          <div>${branchPills || '<span class="hint">لم يتم ربط الفروع بعد</span>'}</div>
-          <button data-open-form="${form.id}">عرض النموذج</button>
+          <div class="pills-row">${branchPills || '<span class="hint">لسه مفيش فروع متحددة</span>'}</div>
+          <details>
+            <summary>تعديل الفروع</summary>
+            <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
+            <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
+          </details>
+          <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
         </div>`
     })
     .join('')
 }
 
-async function openForm(formId) {
+async function saveFormBranches(formId) {
+  const container = document.querySelector(`[data-form-branches="${formId}"]`)
+  const branchIds = [...container.querySelectorAll('input[type="checkbox"]:checked')].map((cb) => Number(cb.value))
   try {
-    const { form, products } = await callApi('form', { id: formId, date: el('runDate').value })
-    const printWindow = window.open('', '_blank')
-    printWindow.document.write(buildPrintableForm(form, products))
-    printWindow.document.close()
+    await callApi('forms-update', { form_id: formId, branch_ids: branchIds })
+    await boot()
   } catch (error) {
     alert(error.message)
   }
 }
 
-function buildPrintableForm(form, products) {
-  const branchColumns = form.form_branches
-    .map((fb) => `<th>${escapeHtml(fb.branches.code)}</th>`)
-    .join('')
+async function openForm(formId) {
+  try {
+    const { date, branches, products } = await callApi('form', { id: formId, date: el('runDate').value })
+    if (!branches.length) return alert('النموذج ده لسه مفيهوش فروع متحددة. دوس "تعديل الفروع" الأول.')
+    openPrintWindow(buildPrintDocument([{ date, location: el('printLocation')?.value, branches, products }]))
+  } catch (error) {
+    alert(error.message)
+  }
+}
 
-  const rows = products
-    .map((product) => {
-      const checkCells = form.form_branches
-        .map((fb) => `<td class="check-mark">${product.checks[fb.branch_id] ? '✓' : ''}</td>`)
-        .join('')
-      const dates = product.product_dates?.[0] || {}
-      return `
-        <tr>
-          <td>${product.row_order}</td>
-          <td>${escapeHtml(product.name)}<br><small>${escapeHtml(product.code)}</small></td>
-          ${checkCells}
-          <td>${dates.production_date || ''}</td>
-          <td>${dates.expiry_date || ''}</td>
-        </tr>`
-    })
-    .join('')
-
-  return `
-    <html dir="rtl">
-      <head>
-        <title>${escapeHtml(form.name)}</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          table { border-collapse: collapse; width: 100%; }
-          th, td { border: 1px solid #999; padding: 8px; text-align: center; }
-          th { background: #eee; }
-        </style>
-      </head>
-      <body>
-        <h2>${escapeHtml(form.name)}</h2>
-        <table>
-          <tr><th>#</th><th>المنتج</th>${branchColumns}<th>الإنتاج</th><th>الانتهاء</th></tr>
-          ${rows}
-        </table>
-        <br>
-        <button onclick="window.print()">طباعة</button>
-      </body>
-    </html>`
+async function printAllForms() {
+  try {
+    const { forms } = await callApi('forms-all', { date: el('runDate').value })
+    if (!forms.length) return alert('مفيش أي نموذج متحدد له فروع لسه.')
+    const sections = forms.map((f) => ({ date: f.date, location: el('printLocation')?.value, branches: f.branches, products: f.products }))
+    openPrintWindow(buildPrintDocument(sections))
+  } catch (error) {
+    alert(error.message)
+  }
 }
 
 // --------------------------------------------------------- Event wiring
@@ -570,11 +592,15 @@ function bindEvents() {
   el('saveProductDateButton').addEventListener('click', saveProductDate)
   el('addGroupButton').addEventListener('click', addGroup)
   el('addProductButton').addEventListener('click', addProduct)
+  el('productFilterGroup').addEventListener('change', onProductFilterChange)
+  el('printAllFormsButton').addEventListener('click', printAllForms)
 
-  // Delegated click handler for the dynamically rendered "view form" buttons
+  // Delegated click handler for the dynamically rendered form tiles (view/print + save branches)
   el('forms').addEventListener('click', (e) => {
-    const button = e.target.closest('[data-open-form]')
-    if (button) openForm(Number(button.dataset.openForm))
+    const openBtn = e.target.closest('[data-open-form]')
+    if (openBtn) return openForm(Number(openBtn.dataset.openForm))
+    const saveBtn = e.target.closest('[data-save-form-branches]')
+    if (saveBtn) return saveFormBranches(Number(saveBtn.dataset.saveFormBranches))
   })
 
   // Delegated handlers for the groups/products admin lists
