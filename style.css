@@ -195,11 +195,10 @@ button.danger   { background: var(--danger); }
   font-size: 12px;
 }
 
-.form-tile button { margin-top: 12px; }
+.form-tile button { margin-top: 8px; margin-inline-end: 6px; }
 
-.form-tile details { margin-top: 10px; font-size: 13px; }
-.form-tile summary { cursor: pointer; color: var(--accent-dark); font-weight: 600; }
-.form-branch-edit { margin: 8px 0; }
+.branch-edit-label { display: block; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.form-branch-edit { margin: 6px 0 4px; }
 .pills-row { min-height: 20px; }
 
 /* ------------------------------------------------------- Admin lists (groups/products) */
@@ -223,7 +222,7 @@ button.danger   { background: var(--danger); }
 .admin-row:last-child { border-bottom: none; }
 
 .admin-row .admin-name, .admin-row select { width: auto; min-width: 140px; }
-.admin-row .admin-code { font-family: monospace; color: var(--muted); min-width: 70px; }
+.admin-row .admin-code { font-family: monospace; color: var(--ink-soft); width: auto; min-width: 90px; }
 
 .swatch-input {
   width: 34px;
@@ -251,6 +250,8 @@ button.danger   { background: var(--danger); }
   font-size: 14px;
 }
 .branch-check input { width: auto; }
+
+.form-tile .branch-check { padding: 5px 8px; font-size: 12px; }
 
 .photo-thumb {
   margin-top: 8px;

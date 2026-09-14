@@ -123,10 +123,9 @@ function enterApp() {
 
 async function boot() {
   appData = await callApi('bootstrap')
-  fillSelect('groupSelect', appData.groups, 'id', 'name', 'اختر المجموعة')
+  fillSelect('dateGroupSelect', appData.groups, 'id', 'name', 'اختر المجموعة')
+  fillSelect('dateProductSelect', appData.products, 'id', 'name', 'كل منتجات المجموعة (تحديث جماعي)')
   fillSelect('newProductGroup', appData.groups, 'id', 'name', 'بدون مجموعة')
-  fillSelect('productSelect', appData.products, 'id', 'name', 'اختر المنتج')
-  fillSelect('productFilterGroup', appData.groups, 'id', 'name', 'كل المنتجات')
   renderForms()
   renderGroupManagement()
   renderBranchCheckboxes()
@@ -193,40 +192,37 @@ function formatInvoiceResults(results) {
     .join('\n\n')
 }
 
-async function saveGroupDates() {
-  try {
-    const { updated } = await callApi('dates-group', {
-      group_id: el('groupSelect').value,
-      production_date: el('groupProd').value,
-      expiry_date: el('groupExp').value,
-      notes: el('groupNote').value,
-    })
-    alert(`تم تحديث ${updated} منتج.`)
-    await boot()
-  } catch (error) {
-    alert(error.message)
-  }
-}
-
-async function saveProductDate() {
-  try {
-    await callApi('dates-product', {
-      product_id: el('productSelect').value,
-      production_date: el('prodProd').value,
-      expiry_date: el('prodExp').value,
-      notes: el('prodNote').value,
-    })
-    alert('تم حفظ بيانات المنتج.')
-    await boot()
-  } catch (error) {
-    alert(error.message)
-  }
-}
-
-function onProductFilterChange() {
-  const groupId = el('productFilterGroup').value
+function onDateGroupChange() {
+  const groupId = el('dateGroupSelect').value
   const filtered = groupId ? appData.products.filter((p) => String(p.group_id) === groupId) : appData.products
-  fillSelect('productSelect', filtered, 'id', 'name', 'اختر المنتج')
+  fillSelect('dateProductSelect', filtered, 'id', 'name', 'كل منتجات المجموعة (تحديث جماعي)')
+}
+
+async function saveDates() {
+  const groupId = el('dateGroupSelect').value
+  const productId = el('dateProductSelect').value
+  if (!groupId && !productId) return alert('اختر مجموعة أو منتج على الأقل.')
+
+  const payload = {
+    production_date: el('dateProd').value,
+    expiry_date: el('dateExp').value,
+    notes: el('dateNote').value,
+  }
+
+  try {
+    if (productId) {
+      // A specific product was picked → update just that one.
+      await callApi('dates-product', { product_id: productId, ...payload })
+      alert('تم حفظ بيانات المنتج.')
+    } else {
+      // Only a group was picked, no specific product → update the whole group at once.
+      const { updated } = await callApi('dates-group', { group_id: groupId, ...payload })
+      alert(`تم تحديث ${updated} منتج دفعة واحدة.`)
+    }
+    await boot()
+  } catch (error) {
+    alert(error.message)
+  }
 }
 
 async function addGroup() {
@@ -278,7 +274,7 @@ function renderGroupManagement() {
         .join('')
       return `
         <div class="admin-row" data-product-id="${p.id}">
-          <span class="admin-code">${escapeHtml(p.code)}</span>
+          <input type="text" class="admin-code" value="${escapeHtml(p.code)}" data-product-code="${p.id}">
           <input type="text" class="admin-name" value="${escapeHtml(p.name)}" data-product-name="${p.id}">
           <select data-product-group="${p.id}"><option value="">بدون مجموعة</option>${groupOptions}</select>
           <button class="secondary" data-save-product="${p.id}">حفظ</button>
@@ -315,6 +311,7 @@ async function saveProductRow(id) {
   try {
     await callApi('products-update', {
       id,
+      code: document.querySelector(`[data-product-code="${id}"]`).value,
       name: document.querySelector(`[data-product-name="${id}"]`).value,
       group_id: document.querySelector(`[data-product-group="${id}"]`).value || null,
     })
@@ -537,11 +534,9 @@ function renderForms() {
         <div class="form-tile" data-form-id="${form.id}">
           <h3>النموذج ${form.form_no}</h3>
           <div class="pills-row">${branchPills || '<span class="hint">لسه مفيش فروع متحددة</span>'}</div>
-          <details>
-            <summary>تعديل الفروع</summary>
-            <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
-            <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
-          </details>
+          <label class="branch-edit-label">فروع هذا النموذج:</label>
+          <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
+          <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
           <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
         </div>`
     })
@@ -588,11 +583,10 @@ function bindEvents() {
   el('saveDateButton').addEventListener('click', saveDate)
   el('resetDayButton').addEventListener('click', resetDay)
   el('uploadButton').addEventListener('click', uploadInvoices)
-  el('saveGroupDatesButton').addEventListener('click', saveGroupDates)
-  el('saveProductDateButton').addEventListener('click', saveProductDate)
+  el('dateGroupSelect').addEventListener('change', onDateGroupChange)
+  el('saveDatesButton').addEventListener('click', saveDates)
   el('addGroupButton').addEventListener('click', addGroup)
   el('addProductButton').addEventListener('click', addProduct)
-  el('productFilterGroup').addEventListener('change', onProductFilterChange)
   el('printAllFormsButton').addEventListener('click', printAllForms)
 
   // Delegated click handler for the dynamically rendered form tiles (view/print + save branches)
