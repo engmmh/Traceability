@@ -313,6 +313,19 @@ button.danger   { background: var(--danger); }
 }
 .branch-check input { width: auto; }
 
+.branch-check-detailed { align-items: flex-start; }
+.branch-check-detailed input { margin-top: 3px; }
+.branch-check-title { display: block; font-weight: 700; font-size: 13px; }
+.branch-check-subtitle {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 220px;
+}
+
 /* ------------------------------------------------------------- Photo upload tiles */
 
 .photo-tile {

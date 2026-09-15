@@ -160,8 +160,9 @@ function goHome() {
 
 async function saveDate() {
   try {
-    const { display } = await callApi('date', { date: el('runDate').value })
+    const { display, date } = await callApi('date', { date: el('runDate').value })
     showMessage('dateMsg', `تم ضبط التاريخ: ${display}`)
+    el('homeCurrentDate').textContent = date
   } catch (error) {
     showMessage('dateMsg', error.message)
   }
@@ -637,8 +638,8 @@ function openPrintWindow(html) {
 function renderForms() {
   el('forms').innerHTML = appData.forms
     .map((form) => {
-      const branchNames = (form.form_branches || []).map((fb) => `${fb.branches.code} (${fb.branches.name})`)
-      const summaryLine = branchNames.length ? branchNames.join('، ') : 'لا توجد فروع بعد'
+      const summaryLine = formBranchSummary(form)
+      const hasBranches = (form.form_branches || []).length > 0
       const branchCheckboxes = appData.branches
         .map((b) => {
           const checked = (form.form_branches || []).some((fb) => fb.branch_id === b.id)
@@ -655,7 +656,7 @@ function renderForms() {
             <span class="form-badge">${form.form_no}</span>
             <div class="form-summary-text">
               <div class="form-title">النموذج ${form.form_no} ${hasPhotos ? '<span class="photo-indicator" title="فيه صور">📷</span>' : ''}</div>
-              <div class="form-branches-line ${branchNames.length ? '' : 'empty'}">${escapeHtml(summaryLine)}</div>
+              <div class="form-branches-line ${hasBranches ? '' : 'empty'}">${escapeHtml(summaryLine)}</div>
             </div>
             <span class="form-expand-arrow">▾</span>
           </div>
@@ -746,15 +747,24 @@ function onPendingPhotoTileClick(e) {
   renderPendingPhotoTiles()
 }
 
+function formBranchSummary(form) {
+  const names = (form.form_branches || []).map((fb) => `${fb.branches.code} (${fb.branches.name})`)
+  return names.length ? names.join('، ') : 'لا توجد فروع بعد'
+}
+
 function renderPhotoFormTargets() {
   el('photoFormTargets').innerHTML = appData.forms
-    .map(
-      (f) => `
-      <label class="branch-check">
+    .map((f) => {
+      const summary = formBranchSummary(f)
+      return `
+      <label class="branch-check branch-check-detailed">
         <input type="checkbox" value="${f.id}" ${pendingPhotoFormTargets.has(f.id) ? 'checked' : ''}>
-        النموذج ${f.form_no}
-      </label>`,
-    )
+        <span>
+          <span class="branch-check-title">النموذج ${f.form_no}</span>
+          <span class="branch-check-subtitle">${escapeHtml(summary)}</span>
+        </span>
+      </label>`
+    })
     .join('')
 }
 
