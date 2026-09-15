@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>نظام أفق الحروف - تفتيش الفروع</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&family=El+Messiri:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -174,16 +174,17 @@
           <label>الفروع (حد أقصى 3)</label>
           <div id="printBranches" class="branches-grid"></div>
 
-          <div class="field-grid">
-            <div>
-              <label for="photo1">صورة حرارة 1</label>
-              <input id="photo1" type="file" accept="image/*" capture="environment">
-              <img id="photoPreview0" class="photo-thumb hidden">
+          <label>صور الحرارة (اختياري)</label>
+          <div class="photo-tiles-row">
+            <div class="photo-tile" id="photoTile0" data-slot="0">
+              <span class="photo-tile-icon">📷</span>
+              <span>إضافة صورة</span>
+              <input type="file" accept="image/*" capture="environment">
             </div>
-            <div>
-              <label for="photo2">صورة حرارة 2</label>
-              <input id="photo2" type="file" accept="image/*" capture="environment">
-              <img id="photoPreview1" class="photo-thumb hidden">
+            <div class="photo-tile" id="photoTile1" data-slot="1">
+              <span class="photo-tile-icon">📷</span>
+              <span>إضافة صورة</span>
+              <input type="file" accept="image/*" capture="environment">
             </div>
           </div>
 

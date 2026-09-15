@@ -28,6 +28,7 @@ const formPhotos = {}
 function getFormPhotos(formId) {
   return formPhotos[formId] || [null, null]
 }
+let expandedFormIds = new Set()
 
 // Fixed bilingual checklist, transcribed verbatim from the original
 // inspection sheet. Kept as data (not hardcoded HTML) so it's easy to
@@ -431,16 +432,44 @@ function onBranchCheckboxChange(e) {
   else selectedPrintBranches.delete(id)
 }
 
-function onPhotoChange(e, slot) {
-  const file = e.target.files?.[0]
+// A single reusable "upload tile" used for every photo slot in the app
+// (custom print + each form's own photos): dashed box with a camera icon
+// while empty, the photo itself with a remove (×) button once set.
+function photoTileInnerHTML(dataUrl) {
+  if (dataUrl) {
+    return `<img src="${dataUrl}"><button type="button" class="photo-tile-remove" data-remove-photo>×</button>`
+  }
+  return `<span class="photo-tile-icon">📷</span><span>إضافة صورة</span><input type="file" accept="image/*" capture="environment">`
+}
+
+function renderCustomPrintPhotoTiles() {
+  ;[0, 1].forEach((slot) => {
+    const tile = el(`photoTile${slot}`)
+    tile.classList.toggle('has-photo', !!photoDataUrls[slot])
+    tile.innerHTML = photoTileInnerHTML(photoDataUrls[slot])
+  })
+}
+
+function onCustomPhotoTileChange(e) {
+  const input = e.target.closest('input[type="file"]')
+  if (!input) return
+  const slot = Number(input.closest('.photo-tile').dataset.slot)
+  const file = input.files?.[0]
   if (!file) return
   const reader = new FileReader()
   reader.onload = () => {
     photoDataUrls[slot] = reader.result
-    el(`photoPreview${slot}`).src = reader.result
-    el(`photoPreview${slot}`).classList.remove('hidden')
+    renderCustomPrintPhotoTiles()
   }
   reader.readAsDataURL(file)
+}
+
+function onCustomPhotoTileClick(e) {
+  const removeBtn = e.target.closest('[data-remove-photo]')
+  if (!removeBtn) return
+  const slot = Number(removeBtn.closest('.photo-tile').dataset.slot)
+  photoDataUrls[slot] = null
+  renderCustomPrintPhotoTiles()
 }
 
 async function previewAndPrint() {
@@ -603,9 +632,8 @@ function openPrintWindow(html) {
 function renderForms() {
   el('forms').innerHTML = appData.forms
     .map((form) => {
-      const branchPills = (form.form_branches || [])
-        .map((fb) => `<span class="pill">${escapeHtml(fb.branches.code)} - ${escapeHtml(fb.branches.name)}</span>`)
-        .join('')
+      const branchNames = (form.form_branches || []).map((fb) => fb.branches.code)
+      const summaryLine = branchNames.length ? branchNames.join('، ') : 'لا توجد فروع بعد'
       const branchCheckboxes = appData.branches
         .map((b) => {
           const checked = (form.form_branches || []).some((fb) => fb.branch_id === b.id)
@@ -613,28 +641,32 @@ function renderForms() {
         })
         .join('')
       const [photo0, photo1] = getFormPhotos(form.id)
+      const isExpanded = expandedFormIds.has(form.id)
+
       return `
-        <div class="form-tile" data-form-id="${form.id}">
-          <h3>النموذج ${form.form_no}</h3>
-          <div class="pills-row">${branchPills || '<span class="hint">لسه مفيش فروع متحددة</span>'}</div>
-          <label class="branch-edit-label">فروع هذا النموذج:</label>
-          <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
-          <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
-
-          <label class="branch-edit-label">صور الحرارة الخاصة بالنموذج ده:</label>
-          <div class="form-photos-row">
-            <div class="form-photo-slot">
-              <input type="file" accept="image/*" capture="environment" data-form-photo-input="${form.id}" data-slot="0">
-              ${photo0 ? `<img class="photo-thumb" src="${photo0}">` : ''}
+        <div class="form-tile ${isExpanded ? 'expanded' : ''}" data-form-id="${form.id}">
+          <div class="form-tile-summary" data-toggle-form="${form.id}">
+            <span class="form-badge">${form.form_no}</span>
+            <div class="form-summary-text">
+              <div class="form-title">النموذج ${form.form_no}</div>
+              <div class="form-branches-line ${branchNames.length ? '' : 'empty'}">${escapeHtml(summaryLine)}</div>
             </div>
-            <div class="form-photo-slot">
-              <input type="file" accept="image/*" capture="environment" data-form-photo-input="${form.id}" data-slot="1">
-              ${photo1 ? `<img class="photo-thumb" src="${photo1}">` : ''}
-            </div>
+            <span class="form-expand-arrow">▾</span>
           </div>
-          ${(photo0 || photo1) ? `<button class="danger" data-clear-form-photos="${form.id}">مسح صور النموذج</button>` : ''}
 
-          <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
+          <div class="form-tile-details">
+            <label class="branch-edit-label">فروع هذا النموذج:</label>
+            <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
+            <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
+
+            <label class="branch-edit-label">صور الحرارة الخاصة بالنموذج ده:</label>
+            <div class="photo-tiles-row">
+              <div class="photo-tile ${photo0 ? 'has-photo' : ''}" data-form-id="${form.id}" data-slot="0">${photoTileInnerHTML(photo0)}</div>
+              <div class="photo-tile ${photo1 ? 'has-photo' : ''}" data-form-id="${form.id}" data-slot="1">${photoTileInnerHTML(photo1)}</div>
+            </div>
+
+            <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
+          </div>
         </div>`
     })
     .join('')
@@ -679,12 +711,14 @@ async function printAllForms() {
 }
 
 function onFormPhotoInputChange(e) {
-  const input = e.target.closest('[data-form-photo-input]')
+  const input = e.target.closest('input[type="file"]')
   if (!input) return
+  const tile = input.closest('.photo-tile[data-form-id]')
+  if (!tile) return
   const file = input.files?.[0]
   if (!file) return
-  const formId = Number(input.dataset.formPhotoInput)
-  const slot = Number(input.dataset.slot)
+  const formId = Number(tile.dataset.formId)
+  const slot = Number(tile.dataset.slot)
   const reader = new FileReader()
   reader.onload = () => {
     const current = formPhotos[formId] || [null, null]
@@ -695,8 +729,22 @@ function onFormPhotoInputChange(e) {
   reader.readAsDataURL(file)
 }
 
-function clearFormPhotos(formId) {
-  delete formPhotos[formId]
+function onFormPhotoTileClick(e) {
+  const removeBtn = e.target.closest('[data-remove-photo]')
+  if (!removeBtn) return
+  const tile = removeBtn.closest('.photo-tile[data-form-id]')
+  if (!tile) return
+  const formId = Number(tile.dataset.formId)
+  const slot = Number(tile.dataset.slot)
+  const current = formPhotos[formId] || [null, null]
+  current[slot] = null
+  formPhotos[formId] = current
+  renderForms()
+}
+
+function toggleFormExpand(formId) {
+  if (expandedFormIds.has(formId)) expandedFormIds.delete(formId)
+  else expandedFormIds.add(formId)
   renderForms()
 }
 
@@ -715,14 +763,17 @@ function bindEvents() {
   el('printAllFormsButton').addEventListener('click', printAllForms)
   el('addBranchButton').addEventListener('click', addBranch)
 
-  // Delegated click handler for the dynamically rendered form tiles (view/print, save branches, clear photos)
+  // Delegated click handler for the dynamically rendered form tiles
+  // (expand/collapse, view/print, save branches, remove a photo)
   el('forms').addEventListener('click', (e) => {
-    const openBtn = e.target.closest('[data-open-form]')
-    if (openBtn) return openForm(Number(openBtn.dataset.openForm))
+    const removeBtn = e.target.closest('[data-remove-photo]')
+    if (removeBtn) return onFormPhotoTileClick(e)
     const saveBtn = e.target.closest('[data-save-form-branches]')
     if (saveBtn) return saveFormBranches(Number(saveBtn.dataset.saveFormBranches))
-    const clearBtn = e.target.closest('[data-clear-form-photos]')
-    if (clearBtn) return clearFormPhotos(Number(clearBtn.dataset.clearFormPhotos))
+    const openBtn = e.target.closest('[data-open-form]')
+    if (openBtn) return openForm(Number(openBtn.dataset.openForm))
+    const toggle = e.target.closest('[data-toggle-form]')
+    if (toggle) return toggleFormExpand(Number(toggle.dataset.toggleForm))
   })
   // Delegated change handler for each form tile's own photo inputs
   el('forms').addEventListener('change', onFormPhotoInputChange)
@@ -751,8 +802,8 @@ function bindEvents() {
 
   // Custom print builder
   el('printBranches').addEventListener('change', onBranchCheckboxChange)
-  el('photo1').addEventListener('change', (e) => onPhotoChange(e, 0))
-  el('photo2').addEventListener('change', (e) => onPhotoChange(e, 1))
+  el('screen-print').addEventListener('change', onCustomPhotoTileChange)
+  el('screen-print').addEventListener('click', onCustomPhotoTileClick)
   el('previewPrintButton').addEventListener('click', previewAndPrint)
 
   // Home dashboard navigation
