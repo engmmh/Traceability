@@ -29,6 +29,8 @@ function getFormPhotos(formId) {
   return formPhotos[formId] || [null, null]
 }
 let expandedFormIds = new Set()
+let pendingPhotoUrls = [null, null]
+let pendingPhotoFormTargets = new Set()
 
 // Fixed bilingual checklist, transcribed verbatim from the original
 // inspection sheet. Kept as data (not hardcoded HTML) so it's easy to
@@ -140,6 +142,9 @@ async function boot() {
   renderGroupManagement()
   renderBranchCheckboxes()
   renderBranchesAdmin()
+  renderPhotoFormTargets()
+  renderPhotoAssignments()
+  renderPendingPhotoTiles()
 }
 
 // --------------------------------------------------------- Screen navigation
@@ -632,7 +637,7 @@ function openPrintWindow(html) {
 function renderForms() {
   el('forms').innerHTML = appData.forms
     .map((form) => {
-      const branchNames = (form.form_branches || []).map((fb) => fb.branches.code)
+      const branchNames = (form.form_branches || []).map((fb) => `${fb.branches.code} (${fb.branches.name})`)
       const summaryLine = branchNames.length ? branchNames.join('، ') : 'لا توجد فروع بعد'
       const branchCheckboxes = appData.branches
         .map((b) => {
@@ -641,6 +646,7 @@ function renderForms() {
         })
         .join('')
       const [photo0, photo1] = getFormPhotos(form.id)
+      const hasPhotos = photo0 || photo1
       const isExpanded = expandedFormIds.has(form.id)
 
       return `
@@ -648,7 +654,7 @@ function renderForms() {
           <div class="form-tile-summary" data-toggle-form="${form.id}">
             <span class="form-badge">${form.form_no}</span>
             <div class="form-summary-text">
-              <div class="form-title">النموذج ${form.form_no}</div>
+              <div class="form-title">النموذج ${form.form_no} ${hasPhotos ? '<span class="photo-indicator" title="فيه صور">📷</span>' : ''}</div>
               <div class="form-branches-line ${branchNames.length ? '' : 'empty'}">${escapeHtml(summaryLine)}</div>
             </div>
             <span class="form-expand-arrow">▾</span>
@@ -658,12 +664,6 @@ function renderForms() {
             <label class="branch-edit-label">فروع هذا النموذج:</label>
             <div class="branches-grid form-branch-edit" data-form-branches="${form.id}">${branchCheckboxes}</div>
             <button class="secondary" data-save-form-branches="${form.id}">حفظ فروع النموذج</button>
-
-            <label class="branch-edit-label">صور الحرارة الخاصة بالنموذج ده:</label>
-            <div class="photo-tiles-row">
-              <div class="photo-tile ${photo0 ? 'has-photo' : ''}" data-form-id="${form.id}" data-slot="0">${photoTileInnerHTML(photo0)}</div>
-              <div class="photo-tile ${photo1 ? 'has-photo' : ''}" data-form-id="${form.id}" data-slot="1">${photoTileInnerHTML(photo1)}</div>
-            </div>
 
             <button data-open-form="${form.id}">عرض وطباعة هذا النموذج</button>
           </div>
@@ -710,36 +710,107 @@ async function printAllForms() {
   }
 }
 
-function onFormPhotoInputChange(e) {
+// -------------------------------------------- External photo assignment flow
+// One shared "pending" photo pair (outside the forms list). The user
+// uploads photo 1/2, ticks which form(s) they belong to, then applies —
+// which copies that pair into each target form's own independent slot.
+// Repeatable with different photos/targets each time.
+
+function renderPendingPhotoTiles() {
+  ;[0, 1].forEach((slot) => {
+    const tile = el(`photoTilePending${slot}`)
+    tile.classList.toggle('has-photo', !!pendingPhotoUrls[slot])
+    tile.innerHTML = photoTileInnerHTML(pendingPhotoUrls[slot])
+  })
+}
+
+function onPendingPhotoTileChange(e) {
   const input = e.target.closest('input[type="file"]')
   if (!input) return
-  const tile = input.closest('.photo-tile[data-form-id]')
-  if (!tile) return
+  const slot = Number(input.closest('.photo-tile').dataset.slot)
   const file = input.files?.[0]
   if (!file) return
-  const formId = Number(tile.dataset.formId)
-  const slot = Number(tile.dataset.slot)
   const reader = new FileReader()
   reader.onload = () => {
-    const current = formPhotos[formId] || [null, null]
-    current[slot] = reader.result
-    formPhotos[formId] = current
-    renderForms()
+    pendingPhotoUrls[slot] = reader.result
+    renderPendingPhotoTiles()
   }
   reader.readAsDataURL(file)
 }
 
-function onFormPhotoTileClick(e) {
+function onPendingPhotoTileClick(e) {
   const removeBtn = e.target.closest('[data-remove-photo]')
   if (!removeBtn) return
-  const tile = removeBtn.closest('.photo-tile[data-form-id]')
-  if (!tile) return
-  const formId = Number(tile.dataset.formId)
-  const slot = Number(tile.dataset.slot)
-  const current = formPhotos[formId] || [null, null]
-  current[slot] = null
-  formPhotos[formId] = current
+  const slot = Number(removeBtn.closest('.photo-tile').dataset.slot)
+  pendingPhotoUrls[slot] = null
+  renderPendingPhotoTiles()
+}
+
+function renderPhotoFormTargets() {
+  el('photoFormTargets').innerHTML = appData.forms
+    .map(
+      (f) => `
+      <label class="branch-check">
+        <input type="checkbox" value="${f.id}" ${pendingPhotoFormTargets.has(f.id) ? 'checked' : ''}>
+        النموذج ${f.form_no}
+      </label>`,
+    )
+    .join('')
+}
+
+function onPhotoFormTargetChange(e) {
+  const checkbox = e.target.closest('input[type="checkbox"]')
+  if (!checkbox) return
+  const id = Number(checkbox.value)
+  if (checkbox.checked) pendingPhotoFormTargets.add(id)
+  else pendingPhotoFormTargets.delete(id)
+}
+
+function applyPendingPhotosToForms() {
+  if (!pendingPhotoUrls[0] && !pendingPhotoUrls[1]) return alert('ارفع صورة واحدة على الأقل الأول.')
+  if (!pendingPhotoFormTargets.size) return alert('حدد نموذج واحد على الأقل تتطبق عليه الصور.')
+
+  pendingPhotoFormTargets.forEach((formId) => {
+    formPhotos[formId] = [pendingPhotoUrls[0], pendingPhotoUrls[1]]
+  })
+
+  pendingPhotoUrls = [null, null]
+  pendingPhotoFormTargets = new Set()
+  renderPendingPhotoTiles()
+  renderPhotoFormTargets()
   renderForms()
+  renderPhotoAssignments()
+}
+
+function renderPhotoAssignments() {
+  const assigned = appData.forms.filter((f) => {
+    const [p0, p1] = getFormPhotos(f.id)
+    return p0 || p1
+  })
+  if (!assigned.length) {
+    el('photoAssignments').innerHTML = ''
+    return
+  }
+  el('photoAssignments').innerHTML = `
+    <label class="branch-edit-label">النماذج اللي عندها صور دلوقتي:</label>
+    <div class="admin-list">
+      ${assigned
+        .map(
+          (f) => `
+        <div class="admin-row assignment-row">
+          <span class="admin-name">النموذج ${f.form_no}</span>
+          <span></span>
+          <button class="danger" data-clear-assignment="${f.id}">مسح صور هذا النموذج</button>
+        </div>`,
+        )
+        .join('')}
+    </div>`
+}
+
+function clearFormPhotoAssignment(formId) {
+  delete formPhotos[formId]
+  renderForms()
+  renderPhotoAssignments()
 }
 
 function toggleFormExpand(formId) {
@@ -764,10 +835,8 @@ function bindEvents() {
   el('addBranchButton').addEventListener('click', addBranch)
 
   // Delegated click handler for the dynamically rendered form tiles
-  // (expand/collapse, view/print, save branches, remove a photo)
+  // (expand/collapse, view/print, save branches)
   el('forms').addEventListener('click', (e) => {
-    const removeBtn = e.target.closest('[data-remove-photo]')
-    if (removeBtn) return onFormPhotoTileClick(e)
     const saveBtn = e.target.closest('[data-save-form-branches]')
     if (saveBtn) return saveFormBranches(Number(saveBtn.dataset.saveFormBranches))
     const openBtn = e.target.closest('[data-open-form]')
@@ -775,8 +844,16 @@ function bindEvents() {
     const toggle = e.target.closest('[data-toggle-form]')
     if (toggle) return toggleFormExpand(Number(toggle.dataset.toggleForm))
   })
-  // Delegated change handler for each form tile's own photo inputs
-  el('forms').addEventListener('change', onFormPhotoInputChange)
+
+  // External "add photos" flow (outside the forms list)
+  el('pendingPhotoRow').addEventListener('change', onPendingPhotoTileChange)
+  el('pendingPhotoRow').addEventListener('click', onPendingPhotoTileClick)
+  el('photoFormTargets').addEventListener('change', onPhotoFormTargetChange)
+  el('applyPhotosButton').addEventListener('click', applyPendingPhotosToForms)
+  el('photoAssignments').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-clear-assignment]')
+    if (btn) clearFormPhotoAssignment(Number(btn.dataset.clearAssignment))
+  })
 
   // Delegated handlers for the branches admin list
   el('branchesList').addEventListener('click', (e) => {

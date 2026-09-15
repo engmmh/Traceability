@@ -419,6 +419,7 @@ button.danger   { background: var(--danger); }
 
 .form-summary-text { flex: 1; min-width: 0; }
 .form-summary-text .form-title { font-weight: 700; font-size: 14px; }
+.photo-indicator { font-size: 12px; }
 .form-summary-text .form-branches-line {
   font-size: 12px;
   color: var(--muted);

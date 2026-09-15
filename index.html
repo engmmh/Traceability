@@ -196,9 +196,35 @@
       <!-- ---------------- Forms screen ---------------- -->
       <div id="screen-forms" class="screen hidden">
         <button class="back-button" data-go-home>⬅ الرئيسية</button>
+
+        <div class="card">
+          <h2>📷 صور الحرارة</h2>
+          <p class="hint">ارفع صورة أو اتنين، بعدين حدد نموذج أو أكتر تحب الصور دي تتحط فيهم، ودوس تطبيق. تقدر تكرر الخطوة دي كذا مرة بصور مختلفة لنماذج مختلفة.</p>
+
+          <div class="photo-tiles-row" id="pendingPhotoRow">
+            <div class="photo-tile" id="photoTilePending0" data-slot="0">
+              <span class="photo-tile-icon">📷</span>
+              <span>صورة 1</span>
+              <input type="file" accept="image/*" capture="environment">
+            </div>
+            <div class="photo-tile" id="photoTilePending1" data-slot="1">
+              <span class="photo-tile-icon">📷</span>
+              <span>صورة 2</span>
+              <input type="file" accept="image/*" capture="environment">
+            </div>
+          </div>
+
+          <label class="branch-edit-label">تطبّق على النماذج:</label>
+          <div id="photoFormTargets" class="branches-grid"></div>
+
+          <button id="applyPhotosButton" class="primary">تطبيق الصور على النماذج المحددة</button>
+
+          <div id="photoAssignments"></div>
+        </div>
+
         <div class="card">
           <h2>النماذج الـ12</h2>
-          <p class="hint">حدد فروع كل نموذج مرة، وبعدها تقدر تطبعه لوحده أو تطبع كل النماذج مع بعض في ورقة واحدة (كل نموذج بصفحاته الخاصة). كل نموذج ليه صور حرارة خاصة بيه تقدر تضيفها أو تمسحها براحتك.</p>
+          <p class="hint">حدد فروع كل نموذج مرة، وبعدها تقدر تطبعه لوحده أو تطبع كل النماذج مع بعض في ورقة واحدة (كل نموذج بصفحاته الخاصة).</p>
           <button id="printAllFormsButton" class="primary">طباعة كل النماذج مع بعض</button>
           <br><br>
           <div id="forms" class="forms-grid"></div>
