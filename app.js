@@ -197,11 +197,17 @@ async function uploadInvoices() {
   }
 
   try {
+    el('pdfStatus').textContent = 'تم قراءة الملفات — جاري رفع البيانات ومطابقة الأكواد في الخادم...'
+    el('pdfBar').style.width = '85%'
+    el('pdfBar').classList.add('pulsing')
     const { results } = await callApi('invoices', { date: el('runDate').value, files: extracted })
+    el('pdfBar').classList.remove('pulsing')
     el('pdfBar').style.width = '100%'
     el('pdfStatus').textContent = 'اكتملت المعالجة'
     showMessage('uploadMsg', formatInvoiceResults(results))
   } catch (error) {
+    el('pdfBar').classList.remove('pulsing')
+    el('pdfStatus').textContent = 'حدث خطأ أثناء المعالجة'
     showMessage('uploadMsg', error.message)
   }
 }

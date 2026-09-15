@@ -179,6 +179,13 @@ button.danger   { background: var(--danger); }
   background: var(--success);
   transition: width .2s ease;
 }
+.progress > i.pulsing {
+  animation: progress-pulse 1.1s ease-in-out infinite;
+}
+@keyframes progress-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .45; }
+}
 
 .progress-status {
   font-size: 12px;
